@@ -2,6 +2,7 @@ package com.example.abhiandroidmaps;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.widget.SearchView;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
@@ -16,6 +17,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -35,6 +37,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.example.abhiandroidmaps.databinding.ActivityMapsBinding;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -47,6 +50,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     LocationRequest mLocationRequest;
     private GoogleMap mMap;
     private ActivityMapsBinding binding;
+    SearchView searchView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,6 +59,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         binding = ActivityMapsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        //SearchView
+        searchView = (SearchView) findViewById(R.id.search_view);
+
+
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             checkLocationPermission();
         }
@@ -62,6 +70,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+
+
+        //Search Query Code
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                String sLocation = searchView.getQuery().toString();
+                // on below line we are getting the
+                // location name from search view.
+                List<Address> sAddressList = null;
+
+                if (sLocation != null || sLocation.equals("")){
+
+                    Geocoder sGeocoder = new Geocoder(MapsActivity.this);
+                    try{
+                        sAddressList = sGeocoder.getFromLocationName(sLocation,1);
+                    }catch(IOException e){
+                        e.printStackTrace();
+                    }
+
+                    Address sAddress = sAddressList.get(0);
+
+                    LatLng sLatLng = new LatLng(sAddress.getLatitude(),sAddress.getLongitude());
+                    MarkerOptions markerOptions = new MarkerOptions();
+                    markerOptions.position(sLatLng).title(sLocation);
+                    setmarkerMethod(sLatLng,markerOptions);
+
+//                    mMap.addMarker(new MarkerOptions().position(sLatLng).title(sLocation));
+//
+//                    mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(sLatLng,10));
+                }
+
+                return false;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
         mapFragment.getMapAsync(this);
     }
 
@@ -172,13 +220,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
         markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
-        mCurrLocationMarker = mMap.addMarker(markerOptions);
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
-        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+//        mCurrLocationMarker = mMap.addMarker(markerOptions);
+//        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+//        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
+        setmarkerMethod(latLng,markerOptions);
         if (mGoogleApiClient != null) {
             LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient,
                     (com.google.android.gms.location.LocationListener) this);
         }
+    }
+
+    public void setmarkerMethod(LatLng latLng, MarkerOptions markerOptions){
+        if (mCurrLocationMarker!=null){
+            mCurrLocationMarker.remove();
+        }
+        mCurrLocationMarker = mMap.addMarker(markerOptions);
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(latLng));
+        mMap.animateCamera(CameraUpdateFactory.zoomTo(11));
     }
 
     @Override
